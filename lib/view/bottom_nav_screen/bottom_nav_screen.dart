@@ -15,7 +15,7 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
   final List<Widget> myscreens = [
     HomeScreen(),
     MyBucketScreen(),
-    MyprofileScreen(),
+    MyProfileScreen(),
   ];
   @override
   Widget build(BuildContext context) {

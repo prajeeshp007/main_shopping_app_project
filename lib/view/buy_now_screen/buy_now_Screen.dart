@@ -1,4 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:main_shopping_app_project/view/payment_details_screen/payment_details_screen.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 class BuyNowScreen extends StatefulWidget {
   final String imageurl;
@@ -17,14 +20,93 @@ class BuyNowScreen extends StatefulWidget {
 }
 
 class _BuyNowScreenState extends State<BuyNowScreen> {
+  final editProfile = FirebaseFirestore.instance.collection('editprofile');
+  String? name;
+  String? phone;
+  String? address;
   @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _paymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _paymentFailure);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _paymentWallet);
+  }
+
+  @override
+  Future<void> _loadUserProfile() async {
+    final snapshot = await editProfile
+        .doc('USER_ID')
+        .get(); // Replace 'USER_ID' with actual user ID
+    if (snapshot.exists) {
+      final data = snapshot.data()!;
+      setState(() {
+        name = data['name'];
+        phone = data['phone'];
+        address =
+            data['address']; // Assuming the image URL is stored in 'imageUrl'
+      });
+    }
+  }
+
+  late Razorpay _razorpay;
+  void _paymentSuccess(PaymentSuccessResponse response) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text("success$response")));
+    //toast
+    print("Payment success$response");
+  }
+
+  void _paymentFailure(PaymentFailureResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: Colors.red, content: Text("Paymen fail $response")));
+    print("fail$response");
+  }
+
+  void _paymentWallet(ExternalWalletResponse response) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text("Wallet$response")));
+    print("wallet$response");
+  }
+
+  @override
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
+    _razorpay.clear();
+  }
+
+  void checkout(double amt, String ph, String email, String shopname,
+      String discription) {
+    var options = {
+      //dynamic key of clint please replace key with ur key
+      'key': 'rzp_live_ILgsfZCZoFIKMb',
+      //amt in pisa
+      'amount': amt * 100,
+      'name': shopname,
+      'description': discription,
+      'retry': {'enabled': true, 'max_count': 1},
+      'send_sms_hash': true,
+      'prefill': {'contact': '$ph', 'email': '$email'},
+      'external': {
+        'wallets': ['paytm', 'gpay']
+      }
+    };
+
+    try {
+      _razorpay.open(options);
+    } catch (e) {}
+  }
+
   Widget build(BuildContext context) {
     ///  code for calculating total amount
     double totalAmount = widget.productprice * widget.qty;
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: const Text('Payment Details'),
+        title: const Text('Order Summary'),
       ),
       body: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
@@ -42,21 +124,21 @@ class _BuyNowScreenState extends State<BuyNowScreen> {
                     fontSize: 25),
               ),
               Text(
-                'Prajeesh ',
+                name ?? 'name not avilable',
                 style: TextStyle(
                     color: Colors.black,
                     fontWeight: FontWeight.bold,
                     fontSize: 25),
               ),
               Text(
-                'praveena Nivas Kinavallur Parli Post Paalakkad',
+                address ?? 'address not available',
                 style: TextStyle(
                     color: Colors.black,
                     fontWeight: FontWeight.w400,
                     fontSize: 20),
               ),
               Text(
-                '9074230961',
+                phone ?? 'number not available',
                 style: TextStyle(
                     color: Colors.black,
                     fontWeight: FontWeight.w400,
@@ -210,7 +292,7 @@ class _BuyNowScreenState extends State<BuyNowScreen> {
                         fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    'RS${totalAmount.toStringAsFixed(2)}',
+                    'RS ${totalAmount.toStringAsFixed(2)}',
                     style: TextStyle(
                         color: Colors.black,
                         fontSize: 25,
@@ -224,7 +306,11 @@ class _BuyNowScreenState extends State<BuyNowScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      // Add your payment logic here
+                      checkout(totalAmount, phone!, 'prajeeshpramod@gmail.com',
+                          "Akshatam Mart", "Grocery Item");
+                    },
                     child: Text(
                       'Pay Now',
                       style: TextStyle(

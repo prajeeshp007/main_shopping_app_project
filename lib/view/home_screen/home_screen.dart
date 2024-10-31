@@ -10,8 +10,34 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final editProfile = FirebaseFirestore.instance.collection('editprofile');
   var vegetablesdetails =
       FirebaseFirestore.instance.collection('vegetablesdetails');
+  String? name;
+
+  String? imageUrl;
+
+  Future<void> _loadUserProfile() async {
+    final snapshot = await editProfile
+        .doc('USER_ID')
+        .get(); // Replace 'USER_ID' with actual user ID
+    if (snapshot.exists) {
+      final data = snapshot.data()!;
+      setState(() {
+        name = data['name'];
+
+        imageUrl =
+            data['url']; // Assuming the image URL is stored in 'imageUrl'
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -22,12 +48,13 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Row(
           children: [
             CircleAvatar(
-              backgroundImage: NetworkImage(
-                  'https://via.placeholder.com/150'), // Replace with profile image URL
-            ),
+                backgroundImage: imageUrl != null
+                    ? NetworkImage(imageUrl!)
+                    : null // Replace with profile image URL
+                ),
             SizedBox(width: 10),
             Text(
-              'Hi, Prajeesh p',
+              'Hi, ${name}',
               style: TextStyle(color: Colors.black, fontSize: 16),
             ),
             Spacer(),
